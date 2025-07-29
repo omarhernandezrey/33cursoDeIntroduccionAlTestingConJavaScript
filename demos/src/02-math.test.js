@@ -1,4 +1,6 @@
-const {sum, multiply, divide} = require('./02-math');
+// eslint-env jest
+import { test, expect } from '@jest/globals';
+import {sum, multiply, divide} from './02-math.js';
 
 test('adds 1 + 3 to equal 4', () => {
   const rta = sum(1, 3);
