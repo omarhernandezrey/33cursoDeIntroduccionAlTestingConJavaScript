@@ -1,4 +1,3 @@
-import { test, expect } from 'vitest';
 import sum from './01-sum.js';
 
 test('adds 1 + 2 to equal 3', () => {
