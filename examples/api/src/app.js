@@ -9,7 +9,7 @@ const createApp = () => {
   app.use(express.json());
 
   app.get('/', (req, res) => {
-    res.send('Hello World!');
+    res.send('Hello World Omar Hernandez!');
   });
 
   routerApi(app);
