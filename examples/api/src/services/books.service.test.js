@@ -1,7 +1,6 @@
+const { fa } = require('@faker-js/faker');
 const BooksService = require('./books.service');
-const fakeBooks = [
-  { id: '1', name: 'Harry Potter' },
-];
+const { generateManyBooks } = require('../fakes/book.fake');
 
 const mockGetAll = jest.fn();
 jest.mock('../lib/mongo.lib', () => jest.fn().mockImplementation(() => {
@@ -21,12 +20,13 @@ describe('Test for BooksService', () => {
   describe('test for getBooks', () => {
     test('should return a list book', async () => {
       // Arrange
+      const fakeBooks = generateManyBooks(20);
       mockGetAll.mockResolvedValue(fakeBooks);
       // Act
       const books = await service.getBooks({});
       console.log(books);
       // Assert
-      expect(books.length).toEqual(1);
+      expect(books.length).toEqual(20);
       expect(mockGetAll).toHaveBeenCalledTimes(1);
       expect(mockGetAll).toHaveBeenCalledWith('books', {});
 
@@ -34,12 +34,13 @@ describe('Test for BooksService', () => {
 
     test('should return the correct book name', async () => {
       // Arrange
-      mockGetAll.mockResolvedValue([{ id: '1', name: 'Harry Potter 2' }]);
+      const fakeBooks = generateManyBooks(4);
+      mockGetAll.mockResolvedValue(fakeBooks);
       // Act
       const books = await service.getBooks({});
       console.log(books);
       // Assert
-      expect(books[0].name).toEqual('Harry Potter 2');
+      expect(books[0].name).toEqual(fakeBooks[0].name);
     });
   });
 });
