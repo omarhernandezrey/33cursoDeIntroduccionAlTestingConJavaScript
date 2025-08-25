@@ -8,7 +8,7 @@ describe('Test for /hello endpoint', () => {
 
     beforeAll(() => {
         app =  createApp();
-        server = app.listen(3001);
+        server = app.listen(3002);
     });
 
     afterAll(async () => {
