@@ -5,12 +5,10 @@ const fakeBooks = [
 ];
 
 const mockGetAll = jest.fn();
-jest.mock('../lib/mongo.lib', () => jest.fn().mockImplementation(() => {
-  return {
-    getAll: mockGetAll,
-    create: () => {},
-  }
-}));
+jest.mock('../lib/mongo.lib', () => jest.fn().mockImplementation(() => ({
+  getAll: mockGetAll,
+  create: () => {},
+})));
 
 describe('Test for BooksService', () => {
   let service;
@@ -25,12 +23,12 @@ describe('Test for BooksService', () => {
       mockGetAll.mockResolvedValue(fakeBooks);
       // Act
       const books = await service.getBooks({});
+      // eslint-disable-next-line no-console
       console.log(books);
       // Assert
       expect(books.length).toEqual(1);
       expect(mockGetAll).toHaveBeenCalledTimes(1);
       expect(mockGetAll).toHaveBeenCalledWith('books', {});
-
     });
 
     test('should return the correct book name', async () => {
@@ -38,6 +36,7 @@ describe('Test for BooksService', () => {
       mockGetAll.mockResolvedValue([{ id: '1', name: 'Harry Potter 2' }]);
       // Act
       const books = await service.getBooks({});
+      // eslint-disable-next-line no-console
       console.log(books);
       // Assert
       expect(books[0].name).toEqual('Harry Potter 2');
