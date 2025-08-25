@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - 'examples/api/**'
+      - 'demos/**'
+      - '.github/workflows/**'
+  pull_request:
+    paths:
+      - 'examples/api/**'
+      - 'demos/**'
+      - '.github/workflows/**'
+
+jobs:
+  test-and-lint:
+    name: Test & Lint (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: api
+            path: examples/api
+          - name: demos
+            path: demos
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+        working-directory: ${{ matrix.path }}
+
+      - name: Run lint (if defined)
+        run: |
+          if npm run | grep -q "lint"; then npm run lint; else echo "no lint script"; fi
+        working-directory: ${{ matrix.path }}
+
+      - name: Run unit tests (if defined)
+        run: |
+          if npm run | grep -q "test"; then npm test; else echo "no test script"; fi
+        working-directory: ${{ matrix.path }}
