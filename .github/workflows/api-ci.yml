@@ -3,15 +3,15 @@ name: API CI
 on:
   push:
     paths:
-      - "./api/**"
-      - ".github/workflows/api-ci.yml"
+      - 'examples/api/**'
+      - '.github/workflows/api-ci.yml'
 
 jobs:
   unit-test:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./api
+        working-directory: ./examples/api
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: '14'
           cache: 'npm'
-          cache-dependency-path: api/package-lock.json
+          cache-dependency-path: examples/api/package-lock.json
       - name: Install dependencies
         shell: bash
         run: npm ci
