@@ -1,64 +1,168 @@
-name: CI
+name: CI - Testing JavaScript Course
 
 on:
   push:
-    paths:
-      - 'examples/api/**'
-      - 'demos/**'
-      - '.github/workflows/**'
+    branches: [ main, develop ]
   pull_request:
-    paths:
-      - 'examples/api/**'
-      - 'demos/**'
-      - '.github/workflows/**'
+    branches: [ main ]
 
 jobs:
-  test-and-lint:
-    name: Test & Lint (${{ matrix.name }})
+  # Job 1: Tests básicos con Jest (demos)
+  demos-tests:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - name: api
-            path: examples/api
-          - name: demos
-            path: demos
-          - name: webapp
-            path: webapp
-
+    name: 📚 Demos - Jest Tests
+    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: 'demos/package-lock.json'
+    
+    - name: Install dependencies
+      working-directory: ./demos
+      run: npm ci
+    
+    - name: Run lint
+      working-directory: ./demos
+      run: npm run lint
+    
+    - name: Run tests
+      working-directory: ./demos
+      run: npm test
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '16'
+  # Job 2: Tests unitarios de API
+  api-unit-tests:
+    runs-on: ubuntu-latest
+    name: 🔧 API - Unit Tests
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: 'examples/api/package-lock.json'
+    
+    - name: Install dependencies
+      working-directory: ./examples/api
+      run: npm ci
+    
+    - name: Run lint
+      working-directory: ./examples/api
+      run: npm run lint
+    
+    - name: Run unit tests
+      working-directory: ./examples/api
+      run: npm test
 
-      - name: Install dependencies
-        run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi
-        working-directory: ${{ matrix.path }}
+  # Job 3: Tests E2E de API con MongoDB
+  api-e2e-tests:
+    runs-on: ubuntu-latest
+    name: 🚀 API - E2E Tests with MongoDB
+    
+    services:
+      mongo-e2e:
+        image: mongo:4.4
+        env:
+          MONGO_INITDB_ROOT_USERNAME: e2e
+          MONGO_INITDB_ROOT_PASSWORD: e2e123
+        ports:
+          - 27019:27017
+        options: >-
+          --health-cmd "mongo --eval 'db.adminCommand(\"ismaster\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: 'examples/api/package-lock.json'
+    
+    - name: Install dependencies
+      working-directory: ./examples/api
+      run: npm ci
+    
+    - name: Wait for MongoDB
+      run: |
+        echo "Waiting for MongoDB to be ready..."
+        timeout 30 bash -c 'until nc -z localhost 27019; do sleep 1; done'
+        echo "MongoDB is ready!"
+    
+    - name: Run E2E tests
+      working-directory: ./examples/api
+      run: npm run test:e2e
+      env:
+        MONGO_URL: mongodb://e2e:e2e123@localhost:27019/booksdb?authSource=admin
 
-      - name: Install Playwright browsers (webapp only)
-        if: matrix.name == 'webapp'
-        run: |
-          npx playwright install --with-deps
-        working-directory: ${{ matrix.path }}
+  # Job 4: Tests de Playwright (webapp)
+  webapp-playwright-tests:
+    runs-on: ubuntu-latest
+    name: 🌐 Webapp - Playwright Tests
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: 'webapp/package-lock.json'
+    
+    - name: Install dependencies
+      working-directory: ./webapp
+      run: npm ci
+    
+    - name: Install Playwright Browsers
+      working-directory: ./webapp
+      run: npx playwright install --with-deps
+    
+    - name: Run Playwright tests
+      working-directory: ./webapp
+      run: npm run test:ci
+    
+    - name: Upload Playwright Report
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: playwright-report
+        path: webapp/playwright-report/
+        retention-days: 7
 
-      - name: Run lint (if defined)
-        run: |
-          if npm run | grep -q "lint"; then npm run lint; else echo "no lint script"; fi
-        working-directory: ${{ matrix.path }}
-
-      - name: Run unit tests (if defined)
-        run: |
-          if npm run | grep -q "test"; then npm test; else echo "no test script"; fi
-        working-directory: ${{ matrix.path }}
-
-      - name: Upload Playwright report (webapp only)
-        if: matrix.name == 'webapp'
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-${{ github.run_id }}
-          path: ${{ matrix.path }}/playwright-report || ${{ matrix.path }}/test-results || ''
+  # Job 5: Resumen final
+  tests-summary:
+    runs-on: ubuntu-latest
+    name: ✅ Tests Summary
+    needs: [demos-tests, api-unit-tests, api-e2e-tests, webapp-playwright-tests]
+    if: always()
+    
+    steps:
+    - name: Tests Results Summary
+      run: |
+        echo "## 🧪 Test Results Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----------|---------|" >> $GITHUB_STEP_SUMMARY
+        echo "| 📚 Demos (Jest) | ${{ needs.demos-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🔧 API Unit Tests | ${{ needs.api-unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🚀 API E2E Tests | ${{ needs.api-e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🌐 Webapp (Playwright) | ${{ needs.webapp-playwright-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [[ "${{ needs.demos-tests.result }}" == "success" && "${{ needs.api-unit-tests.result }}" == "success" && "${{ needs.api-e2e-tests.result }}" == "success" && "${{ needs.webapp-playwright-tests.result }}" == "success" ]]; then
+          echo "🎉 **All tests passed!** Your JavaScript Testing Course is working perfectly." >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Some tests failed.** Check the individual job logs for details." >> $GITHUB_STEP_SUMMARY
+        fi
