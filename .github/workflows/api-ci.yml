@@ -16,11 +16,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: '14'
-          cache: 'npm'
-          cache-dependency-path: examples/api/package-lock.json
       - name: Install dependencies
         shell: bash
         run: npm ci
