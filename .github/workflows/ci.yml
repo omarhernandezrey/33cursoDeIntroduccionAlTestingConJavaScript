@@ -23,6 +23,8 @@ jobs:
             path: examples/api
           - name: demos
             path: demos
+          - name: webapp
+            path: webapp
 
     steps:
       - name: Checkout
@@ -38,6 +40,12 @@ jobs:
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
         working-directory: ${{ matrix.path }}
 
+      - name: Install Playwright browsers (webapp only)
+        if: matrix.name == 'webapp'
+        run: |
+          npx playwright install --with-deps
+        working-directory: ${{ matrix.path }}
+
       - name: Run lint (if defined)
         run: |
           if npm run | grep -q "lint"; then npm run lint; else echo "no lint script"; fi
@@ -47,3 +55,10 @@ jobs:
         run: |
           if npm run | grep -q "test"; then npm test; else echo "no test script"; fi
         working-directory: ${{ matrix.path }}
+
+      - name: Upload Playwright report (webapp only)
+        if: matrix.name == 'webapp'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: ${{ matrix.path }}/playwright-report || ${{ matrix.path }}/test-results || ''
